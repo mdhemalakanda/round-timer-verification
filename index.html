@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FR-TIME 6.7 — Round Timers &amp; Access Windows — Verification Report</title>
+<style>
+  body { font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; margin: 0; background: #f4f6fb; color: #1c2434; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 32px 24px 80px; }
+  h1 { font-size: 28px; margin: 8px 0 4px; color: #16389A; }
+  h2 { font-size: 21px; margin: 40px 0 10px; color: #16389A; border-bottom: 2px solid #d9e0f2; padding-bottom: 6px; }
+  h3 { font-size: 17px; margin: 22px 0 8px; }
+  .meta { color: #5a6480; font-size: 14px; margin-bottom: 24px; }
+  .badge { display: inline-block; background: #16389A; color: #fff; border-radius: 999px; padding: 3px 12px; font-size: 12px; font-weight: 700; margin-right: 6px; }
+  .pass { color: #0d7a3f; font-weight: 700; }
+  .req { background: #eef3fb; border-left: 4px solid #2453C4; padding: 12px 16px; border-radius: 6px; margin: 10px 0 16px; font-size: 14px; }
+  .impl { background: #eefaf1; border-left: 4px solid #1f9d55; padding: 12px 16px; border-radius: 6px; margin: 10px 0 16px; font-size: 14px; }
+  img.shot { width: 100%; border: 1px solid #d9e0f2; border-radius: 10px; margin: 10px 0 4px; box-shadow: 0 6px 18px -10px rgba(22,56,154,.35); }
+  .caption { font-size: 13px; color: #5a6480; margin: 2px 0 14px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 12px 0; background: #fff; }
+  th, td { border: 1px solid #d9e0f2; padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: #16389A; color: #fff; }
+  code, pre { font-family: Menlo, Consolas, monospace; font-size: 13px; }
+  pre { background: #0e1726; color: #d7e3ff; padding: 12px 14px; border-radius: 8px; overflow-x: auto; }
+  .note { font-size: 13px; color: #5a6480; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>6.7 Round timers &amp; access windows — verification report</h1>
+<div class="meta">
+  Requirement: <code>docs/COMMERCIAL-VERSION-REQUIREMENTS.md</code> § 6.7 (FR-TIME-1 … FR-TIME-4) ·
+  Site: <code>http://localhost:10063</code> · Date: 23 Sep 2026 ·
+  Test account: <code>roundtimer-uat</code> (user 496) through the real WooCommerce order pipeline.
+</div>
+
+<div class="req"><strong>6.7 requirement summary.</strong>
+Initial payment covers rounds 1–3 with a maximum <strong>30-day</strong> window that starts only when the participant
+<strong>completes their first-round tests</strong> — never at payment. Each continuation payment covers 2 rounds
+(4–5, 6–7 …) with a <strong>21-day</strong> window that starts <strong>at payment</strong>. The sidebar shows a visible
+countdown for the active block. The progress questionnaire is available only in the <strong>final round of a block</strong>
+and only after <strong>8 days</strong> into that round; recommended pace <strong>8 days per round</strong> is shown as guidance.
+</div>
+
+<h2>FR-TIME-1 — Initial block (rounds 1–3), timer starts at first-round completion</h2>
+
+<h3>1.1 Payment + initial questionnaire done, round 1 entered → no countdown yet</h3>
+<img class="shot" src="shots/01-round1-entered-no-countdown.png" alt="Round 1 entered — no countdown in sidebar">
+<div class="caption">Participant entered Round 1 (initial questionnaire submitted, test 1A1 rendered). The sidebar has
+<strong>no countdown line</strong>: the 30-day window is still pending because Round 1 has not been completed yet.
+Verified in <code>bt_course_blocks</code>: <code>window_started_at = NULL</code>.</div>
+
+<h3>1.2 Round 1 tests completed → the 30-day window starts and the countdown appears</h3>
+<img class="shot" src="shots/02-round1-completed-countdown-30.png" alt="Round 1 completed — 30-day countdown appears">
+<div class="caption">As soon as Round 1 is completed (round-end logic: per-round test limit / 3–4 rating threshold reached),
+the pending window starts: <code>window_started_at</code> = completion moment, <code>window_ends_at</code> = +30 days.
+The sidebar now shows the countdown (FR-TIME-3) and the round-complete notice explains the 8-day pace
+("Kahdeksan päivän kuluttua…"). Verified programmatically: <code>window_ends_at − now ≈ 30 days</code>.</div>
+
+<div class="impl"><strong>Implementation.</strong> Blocks are stored with the <code>first_round_tests_completed</code>
+trigger and a pending window. <code>CourseBlockAssigner::start_pending_window_on_round_completion()</code> listens to
+<code>bt_round_tests_completed</code> (fired by RoundLimits when Round 1 ends) and starts the window only when the completed
+round equals the block's first round. Access stays open while the window is pending; once started it is enforced by
+<code>ContinuationFlow::can_enter_round()</code> via <code>get_active_granted_round()</code> — expired windows lock their rounds.</div>
+
+<h2>FR-TIME-2 — Continuation blocks (2 rounds), 21 days from payment</h2>
+<img class="shot" src="shots/05-continuation-21day-countdown.png" alt="Continuation purchase — 21-day countdown, round 4 test visible">
+<div class="caption">Right after the continuation order (79 € product) completed, block 4–5 was provisioned with
+<code>window_started_at = payment moment</code> and <code>window_ends_at = +21 days</code>; the sidebar countdown shows 21 days
+and Round 4's test is immediately accessible. Verified programmatically:
+<code>|window_ends_at − (now + 21 days)| &lt; 2 h</code>, and Round 6 stays locked until the next payment.</div>
+
+<h2>FR-TIME-3 — Visible sidebar countdown</h2>
+<img class="shot" src="shots/06-expired-locked-no-countdown.png" alt="Expired window — countdown removed, access locked">
+<div class="caption">The sidebar countdown renders the exact client string
+"<em>Sinulla on X päivää aikaa suorittaa nämä kierrokset loppuun.</em>" from the current block's active window
+(screenshots 02 and 05 show it live at 30 and 21 days). It is hidden while no window is pending/active (screenshot 1.1)
+and disappears when the window expires — at which point the block's rounds are locked
+(<code>can_enter_round()</code> false, tests closed), as verified programmatically by backdating the window.</div>
+
+<h2>FR-TIME-4 — Questionnaire gate: only in the final round, only after 8 days</h2>
+
+<h3>4.1 Final round in progress, &lt; 8 days → check-in locked</h3>
+<img class="shot" src="shots/03-final-round-checkin-locked.png" alt="Final round — check-in locked">
+<div class="caption">Participant is in the block's final round (round start recorded). The Edistyminen tab shows
+<strong>no questionnaire form</strong>: the gate (<code>RoundLimits::is_final_round_checkin_due()</code>) requires
+<code>round_start + 8 days</code> — and the round's tests to be completed. Round starts are recorded automatically
+whenever <code>test_round</code> advances (<code>bt_round_started_at</code> user meta).</div>
+
+<h3>4.2 Final round, &gt; 8 days → check-in unlocks automatically</h3>
+<img class="shot" src="shots/04-final-round-checkin-open-after-8days.png" alt="Final round — check-in open after 8 days">
+<div class="caption">Same participant with the round start backdated 9 days (the phpMyAdmin fast-forward from the manual
+guide): the questionnaire opens <strong>without any email link</strong>, filled, and advances the participant.
+For <strong>non-final rounds</strong> the existing invite / auto-access pacing is retained, retuned to 8 days
+(round end schedules the <code>bt_continuation_round_invite</code> event at the recommended delay).
+<strong>Admin override</strong> is preserved: "Grant progress access" on the Users Progress screen and the manual meta
+grant both open the check-in regardless of the gate.</div>
+
+<h2>Admin configuration — Tests → Settings</h2>
+<img class="shot" src="shots/07-settings-round-timers.png" alt="Admin settings — Round timers & access windows section">
+<div class="caption">New section <strong>"Round timers &amp; access windows"</strong>: the initial and continuation window
+durations are admin-configurable (defaults 30 / 21, validated 1–365). A saved duration is authoritative for newly purchased
+blocks — product meta and code constants apply only when unset — so fast testing is possible (set 1 day) without database
+access. The existing fields above it (round invite delays, auto access, course end date) drive the FR-TIME-4 non-final
+pacing and the legacy countdown. The per-round 8-day questionnaire pacing lives in Test Management
+("Min days for questionnaire").</div>
+
+<h2>Automated verification (all green)</h2>
+<table>
+  <tr><th>Suite</th><th>Scope</th><th>Result</th></tr>
+  <tr><td><code>verify-round-timer.php</code></td><td>Pending → 30-day start, 21-day continuation, expiry locking, countdown strings, 8-day gate at +3/+9 days, non-final pacing, legacy fallback, admin durations</td><td class="pass">ALL CHECKS PASSED</td></tr>
+  <tr><td><code>uat-round-timer-admin-flow.php</code></td><td>End-to-end with real WooCommerce orders: payment → block → rounds → prompt → continuation → expiry → clean delete</td><td class="pass">ALL CHECKS PASSED — 6.7 behaves as required</td></tr>
+  <tr><td><code>verify-round-access-gating.php</code></td><td>Payment-only round access, cumulative windows, settings changes never open rounds</td><td class="pass">ALL CHECKS PASSED</td></tr>
+  <tr><td><code>verify-progress-checkin-rounds.php</code></td><td>Check-in data for any round count, completion semantics, purchase clears completion</td><td class="pass">ALL CHECKS PASSED</td></tr>
+  <tr><td><code>verify-continuation-round-flow.php</code></td><td>Round 4/5 test serving, no repeats, carry-over ordering, clean finish</td><td class="pass">ALL CHECKS PASSED</td></tr>
+  <tr><td><code>verify-delete-round-cleanup.php</code></td><td>Full/single-round delete leaves a perfectly clean state; windows re-arm on restart</td><td class="pass">ALL CHECKS PASSED</td></tr>
+</table>
+
+<h2>Reproduce</h2>
+<pre>cd ~/Local\ Sites/balance-testing/app/public
+php wp-content/plugins/balance-testing/scripts/verify-round-timer.php
+php wp-content/plugins/balance-testing/scripts/uat-round-timer-admin-flow.php
+php wp-content/plugins/balance-testing/scripts/verify-round-access-gating.php
+php wp-content/plugins/balance-testing/scripts/verify-progress-checkin-rounds.php
+php wp-content/plugins/balance-testing/scripts/verify-continuation-round-flow.php
+php wp-content/plugins/balance-testing/scripts/verify-delete-round-cleanup.php</pre>
+
+<p class="note">Bugs found and fixed during this verification round: fresh participants' ratings landed in "round 0"
+(so the 30-day timer never started — FR-TIME-1), the final-round check-in could be submitted before the round's tests
+were done, a full progress delete left the old timers running (FR-TIME-1 restart), and the window durations were not
+admin-configurable. All fixed in this release and covered by the suites above.</p>
+
+</div>
+</body>
+</html>
