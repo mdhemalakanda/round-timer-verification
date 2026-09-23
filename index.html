@@ -3,134 +3,336 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>FR-TIME 6.7 — Round Timers &amp; Access Windows — Verification Report</title>
+<title>Verification report — 6.7 Round timers &amp; access windows + FR-APP-1…7</title>
 <style>
-  body { font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; margin: 0; background: #f4f6fb; color: #1c2434; }
-  .wrap { max-width: 1100px; margin: 0 auto; padding: 32px 24px 80px; }
-  h1 { font-size: 28px; margin: 8px 0 4px; color: #16389A; }
-  h2 { font-size: 21px; margin: 40px 0 10px; color: #16389A; border-bottom: 2px solid #d9e0f2; padding-bottom: 6px; }
-  h3 { font-size: 17px; margin: 22px 0 8px; }
-  .meta { color: #5a6480; font-size: 14px; margin-bottom: 24px; }
-  .badge { display: inline-block; background: #16389A; color: #fff; border-radius: 999px; padding: 3px 12px; font-size: 12px; font-weight: 700; margin-right: 6px; }
-  .pass { color: #0d7a3f; font-weight: 700; }
-  .req { background: #eef3fb; border-left: 4px solid #2453C4; padding: 12px 16px; border-radius: 6px; margin: 10px 0 16px; font-size: 14px; }
-  .impl { background: #eefaf1; border-left: 4px solid #1f9d55; padding: 12px 16px; border-radius: 6px; margin: 10px 0 16px; font-size: 14px; }
-  img.shot { width: 100%; border: 1px solid #d9e0f2; border-radius: 10px; margin: 10px 0 4px; box-shadow: 0 6px 18px -10px rgba(22,56,154,.35); }
-  .caption { font-size: 13px; color: #5a6480; margin: 2px 0 14px; }
+  :root {
+    --brand: #16389A;
+    --brand-2: #2453C4;
+    --ink: #1c2434;
+    --muted: #5a6480;
+    --line: #d9e0f2;
+    --bg: #f4f6fb;
+    --panel: #ffffff;
+    --ok: #0d7a3f;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; }
+
+  /* ---- Left sidebar (searchable TOC) ---- */
+  .sidebar {
+    position: fixed; top: 0; left: 0; bottom: 0; width: 292px;
+    background: #0e1726; color: #d7e3ff;
+    display: flex; flex-direction: column;
+    padding: 18px 14px; overflow-y: auto; z-index: 50;
+    animation: slide-in .45s cubic-bezier(.22,.9,.34,1) both;
+  }
+  @keyframes slide-in { from { transform: translateX(-40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .sidebar h1 { font-size: 15px; margin: 2px 6px 4px; color: #fff; line-height: 1.35; }
+  .sidebar .sub { font-size: 12px; color: #8fa3d0; margin: 0 6px 14px; line-height: 1.5; }
+  .search-wrap { position: relative; margin: 0 4px 12px; }
+  .search-wrap input {
+    width: 100%; padding: 9px 12px 9px 32px; border-radius: 8px; font-size: 13px;
+    border: 1px solid #2a3b66; background: #16203a; color: #e7eeff; outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .search-wrap input:focus { border-color: #4a6fd4; box-shadow: 0 0 0 3px rgba(74,111,212,.25); }
+  .search-wrap::before { content: '⌕'; position: absolute; left: 11px; top: 7px; font-size: 16px; color: #8fa3d0; }
+  .toc { list-style: none; margin: 0; padding: 0; }
+  .toc a {
+    display: block; padding: 7px 10px; margin: 2px 0; border-radius: 8px;
+    color: #c6d4f5; text-decoration: none; font-size: 13px; line-height: 1.4;
+    transition: background .18s, color .18s, transform .18s, padding-left .18s;
+  }
+  .toc a:hover { background: #1d2a4d; color: #fff; transform: translateX(3px); }
+  .toc a.active { background: var(--brand-2); color: #fff; font-weight: 600; }
+  .toc a .tag { display: inline-block; min-width: 30px; color: #8fa3d0; font-weight: 700; font-size: 11px; }
+  .toc a:hover .tag, .toc a.active .tag { color: #b9c9f2; }
+  .toc .no-results { display: none; padding: 10px; font-size: 12px; color: #8fa3d0; }
+
+  /* ---- Content ---- */
+  .content { margin-left: 292px; padding: 34px 34px 90px; }
+  .content .inner { max-width: 980px; margin: 0 auto; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 26px 30px; margin: 0 0 26px; scroll-margin-top: 18px; animation: rise .5s cubic-bezier(.22,.9,.34,1) both; }
+  @keyframes rise { from { transform: translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
+  h1 { font-size: 26px; margin: 0 0 6px; color: var(--brand); }
+  h2 { font-size: 20px; margin: 0 0 12px; color: var(--brand); }
+  h3 { font-size: 16px; margin: 18px 0 8px; }
+  .meta { color: var(--muted); font-size: 13px; margin-bottom: 18px; }
+  .req, .impl { border-radius: 8px; padding: 12px 16px; font-size: 14px; margin: 10px 0 16px; line-height: 1.55; }
+  .req { background: #eef3fb; border-left: 4px solid #2453C4; }
+  .impl { background: #eefaf1; border-left: 4px solid #1f9d55; }
+  img.shot { width: 100%; border: 1px solid var(--line); border-radius: 10px; margin: 10px 0 4px; box-shadow: 0 8px 22px -12px rgba(22,56,154,.4); transition: transform .25s; }
+  img.shot:hover { transform: scale(1.008); }
+  .caption { font-size: 13px; color: var(--muted); margin: 4px 0 14px; }
+  .pass { color: var(--ok); font-weight: 700; }
   table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 12px 0; background: #fff; }
-  th, td { border: 1px solid #d9e0f2; padding: 8px 10px; text-align: left; vertical-align: top; }
-  th { background: #16389A; color: #fff; }
-  code, pre { font-family: Menlo, Consolas, monospace; font-size: 13px; }
-  pre { background: #0e1726; color: #d7e3ff; padding: 12px 14px; border-radius: 8px; overflow-x: auto; }
-  .note { font-size: 13px; color: #5a6480; }
+  th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--brand); color: #fff; }
+  code { background: #eef1fa; border-radius: 4px; padding: 1px 5px; font-size: 13px; }
+  pre { background: #0e1726; color: #d7e3ff; padding: 12px 14px; border-radius: 8px; overflow-x: auto; font-size: 13px; }
+  .note { font-size: 13px; color: var(--muted); }
+  .verdict { background: #eefaf1; border: 1px solid #bfe6cf; border-radius: 12px; padding: 16px 20px; font-size: 15px; margin: 18px 0; }
+  mark { background: #ffe9a8; padding: 0 2px; border-radius: 3px; }
 </style>
 </head>
 <body>
-<div class="wrap">
 
-<h1>6.7 Round timers &amp; access windows — verification report</h1>
-<div class="meta">
-  Requirement: <code>docs/COMMERCIAL-VERSION-REQUIREMENTS.md</code> § 6.7 (FR-TIME-1 … FR-TIME-4) ·
-  Site: <code>http://localhost:10063</code> · Date: 23 Sep 2026 ·
-  Test account: <code>roundtimer-uat</code> (user 496) through the real WooCommerce order pipeline.
-</div>
+<nav class="sidebar">
+  <h1>Verification report</h1>
+  <div class="sub">6.7 Round timers &amp; access windows<br>+ FR-APP-1…7 app updates</div>
+  <div class="search-wrap">
+    <input type="search" id="toc-search" placeholder="Search sections…" autocomplete="off">
+  </div>
+  <ul class="toc" id="toc">
+    <li><a href="#overview"><span class="tag">§0</span> Overview &amp; verdict</a></li>
+    <li><a href="#req-67"><span class="tag">§1</span> Requirement 6.7 (TIME)</a></li>
+    <li><a href="#frtime-1"><span class="tag">T1</span> FR-TIME-1 · Initial 30-day window</a></li>
+    <li><a href="#frtime-2"><span class="tag">T2</span> FR-TIME-2 · Continuation 21 days</a></li>
+    <li><a href="#frtime-3"><span class="tag">T3</span> FR-TIME-3 · Sidebar countdown</a></li>
+    <li><a href="#frtime-4"><span class="tag">T4</span> FR-TIME-4 · 8-day check-in gate</a></li>
+    <li><a href="#admin-settings"><span class="tag">A</span> Admin · window durations</a></li>
+    <li><a href="#frapp-1"><span class="tag">A1</span> FR-APP-1 · Unlimited rounds + Q6</a></li>
+    <li><a href="#frapp-2"><span class="tag">A2</span> FR-APP-2 · Alkukysely texts</a></li>
+    <li><a href="#frapp-3"><span class="tag">A3</span> FR-APP-3 · Hyvä tietää hidden</a></li>
+    <li><a href="#frapp-4"><span class="tag">A4</span> FR-APP-4 · Education in Harjoitukset</a></li>
+    <li><a href="#frapp-5-6"><span class="tag">A5</span> FR-APP-5/6 · Käyttöohjeet tab + PDF</a></li>
+    <li><a href="#frapp-7"><span class="tag">A7</span> FR-APP-7 · Sidebar &amp; dots</a></li>
+    <li><a href="#suites"><span class="tag">✓</span> Automated suites</a></li>
+    <li><a href="#reproduce"><span class="tag">▸</span> Reproduce</a></li>
+    <li class="no-results" id="toc-empty">No matching sections.</li>
+  </ul>
+</nav>
 
-<div class="req"><strong>6.7 requirement summary.</strong>
-Initial payment covers rounds 1–3 with a maximum <strong>30-day</strong> window that starts only when the participant
-<strong>completes their first-round tests</strong> — never at payment. Each continuation payment covers 2 rounds
-(4–5, 6–7 …) with a <strong>21-day</strong> window that starts <strong>at payment</strong>. The sidebar shows a visible
-countdown for the active block. The progress questionnaire is available only in the <strong>final round of a block</strong>
-and only after <strong>8 days</strong> into that round; recommended pace <strong>8 days per round</strong> is shown as guidance.
-</div>
+<main class="content"><div class="inner">
 
-<h2>FR-TIME-1 — Initial block (rounds 1–3), timer starts at first-round completion</h2>
+<section id="overview">
+  <h1>Overview &amp; verdict</h1>
+  <div class="meta">Site <code>http://localhost:10063</code> · requirement doc <code>docs/COMMERCIAL-VERSION-REQUIREMENTS.md</code> · verified 23 Sep 2026 with the test account <code>roundtimer-uat</code> through real WooCommerce orders</div>
+  <div class="verdict">
+    ✅ <strong>6.7 Round timers &amp; access windows and the FR-APP-1…7 app updates are implemented and verified.</strong>
+    Seven automated suites pass (including a dedicated FR-TIME UAT driven through real WooCommerce orders and a
+    dedicated app-updates suite), and every behaviour below is shown with a live UI screenshot.
+  </div>
+  <p>Use the <strong>search box in the left sidebar</strong> to filter sections, click a section to jump to it
+  (smooth scroll, active section highlighted while you scroll).</p>
+</section>
 
-<h3>1.1 Payment + initial questionnaire done, round 1 entered → no countdown yet</h3>
-<img class="shot" src="shots/01-round1-entered-no-countdown.png" alt="Round 1 entered — no countdown in sidebar">
-<div class="caption">Participant entered Round 1 (initial questionnaire submitted, test 1A1 rendered). The sidebar has
-<strong>no countdown line</strong>: the 30-day window is still pending because Round 1 has not been completed yet.
-Verified in <code>bt_course_blocks</code>: <code>window_started_at = NULL</code>.</div>
+<section id="req-67">
+  <h2>Requirement 6.7 — Round timers &amp; access windows (TIME)</h2>
+  <div class="req">
+    <strong>FR-TIME-1</strong> Initial block (rounds 1–3): max <strong>30 days</strong>; timer starts only when the
+    participant <strong>completes their first-round tests</strong> — never at payment; until then no window counts down.
+    Recommended pace <strong>8 days per round</strong> shown as guidance.<br>
+    <strong>FR-TIME-2</strong> Continuation blocks (2 rounds): max <strong>21 days</strong>, timer starts
+    <strong>at payment</strong>.<br>
+    <strong>FR-TIME-3</strong> Visible sidebar countdown for the active block's window.<br>
+    <strong>FR-TIME-4</strong> Progress questionnaire only in the <strong>final round of a block</strong>, only after
+    <strong>8 days</strong> into that round; non-final rounds keep invite/auto-access pacing (retuned to 8 days);
+    admin override preserved.
+  </div>
+</section>
 
-<h3>1.2 Round 1 tests completed → the 30-day window starts and the countdown appears</h3>
-<img class="shot" src="shots/02-round1-completed-countdown-30.png" alt="Round 1 completed — 30-day countdown appears">
-<div class="caption">As soon as Round 1 is completed (round-end logic: per-round test limit / 3–4 rating threshold reached),
-the pending window starts: <code>window_started_at</code> = completion moment, <code>window_ends_at</code> = +30 days.
-The sidebar now shows the countdown (FR-TIME-3) and the round-complete notice explains the 8-day pace
-("Kahdeksan päivän kuluttua…"). Verified programmatically: <code>window_ends_at − now ≈ 30 days</code>.</div>
+<section id="frtime-1">
+  <h2>FR-TIME-1 — Initial 30-day window starts at first-round completion</h2>
+  <h3>Round 1 entered → no countdown yet (window pending)</h3>
+  <img class="shot" src="shots/01-round1-entered-no-countdown.png" alt="Round 1 entered — no countdown in sidebar">
+  <div class="caption">Initial questionnaire submitted, Round 1 test (1A1) rendered — the sidebar has
+  <strong>no countdown line</strong>. <code>bt_course_blocks</code> shows <code>window_started_at = NULL</code>:
+  the 30-day clock has not started.</div>
+  <h3>Round 1 tests completed → the 30-day window starts</h3>
+  <img class="shot" src="shots/02-round1-completed-countdown-30.png" alt="Round 1 completed — 30-day countdown appears">
+  <div class="caption">Round 1 completed (per-round limit/threshold reached) → <code>window_started_at</code> set,
+  <code>window_ends_at = +30 days</code>, sidebar shows the exact countdown string with the pace guidance. The
+  round-complete notice also announces the 8-day rhythm ("Kahdeksan päivän kuluttua…").</div>
+  <div class="impl"><strong>How it works.</strong> Blocks are stored with the <code>first_round_tests_completed</code>
+  trigger and a pending window. <code>CourseBlockAssigner::start_pending_window_on_round_completion()</code> starts the
+  window only when the completed round equals the block's first round. While pending, access is open but no timer runs.</div>
+</section>
 
-<div class="impl"><strong>Implementation.</strong> Blocks are stored with the <code>first_round_tests_completed</code>
-trigger and a pending window. <code>CourseBlockAssigner::start_pending_window_on_round_completion()</code> listens to
-<code>bt_round_tests_completed</code> (fired by RoundLimits when Round 1 ends) and starts the window only when the completed
-round equals the block's first round. Access stays open while the window is pending; once started it is enforced by
-<code>ContinuationFlow::can_enter_round()</code> via <code>get_active_granted_round()</code> — expired windows lock their rounds.</div>
+<section id="frtime-2">
+  <h2>FR-TIME-2 — Continuation 21-day window starts at payment</h2>
+  <img class="shot" src="shots/05-continuation-21day-countdown.png" alt="Continuation purchase — 21-day countdown">
+  <div class="caption">Immediately after the continuation order completed, block 4–5 carried
+  <code>window_started_at = payment</code>, <code>window_ends_at = +21 days</code>, and Round 4's test was accessible.
+  Verified programmatically: <code>|window_ends_at − (now + 21 days)| &lt; 2 h</code>, Round 6 locked until the next payment.</div>
+</section>
 
-<h2>FR-TIME-2 — Continuation blocks (2 rounds), 21 days from payment</h2>
-<img class="shot" src="shots/05-continuation-21day-countdown.png" alt="Continuation purchase — 21-day countdown, round 4 test visible">
-<div class="caption">Right after the continuation order (79 € product) completed, block 4–5 was provisioned with
-<code>window_started_at = payment moment</code> and <code>window_ends_at = +21 days</code>; the sidebar countdown shows 21 days
-and Round 4's test is immediately accessible. Verified programmatically:
-<code>|window_ends_at − (now + 21 days)| &lt; 2 h</code>, and Round 6 stays locked until the next payment.</div>
+<section id="frtime-3">
+  <h2>FR-TIME-3 — Sidebar countdown</h2>
+  <img class="shot" src="shots/06-expired-locked-no-countdown.png" alt="Expired window — countdown removed, access locked">
+  <div class="caption">The sidebar renders "<em>Sinulla on X päivää aikaa suorittaa nämä kierrokset loppuun.</em>"
+  from the current block's window (screenshots 02/05 show it at 30/21 days). While no window is pending/active there is
+  no countdown (screenshot 1.1), and when the window expires the countdown disappears <strong>and the block's rounds
+  lock</strong> — verified by backdating the window and asserting <code>can_enter_round()</code> turns false.</div>
+</section>
 
-<h2>FR-TIME-3 — Visible sidebar countdown</h2>
-<img class="shot" src="shots/06-expired-locked-no-countdown.png" alt="Expired window — countdown removed, access locked">
-<div class="caption">The sidebar countdown renders the exact client string
-"<em>Sinulla on X päivää aikaa suorittaa nämä kierrokset loppuun.</em>" from the current block's active window
-(screenshots 02 and 05 show it live at 30 and 21 days). It is hidden while no window is pending/active (screenshot 1.1)
-and disappears when the window expires — at which point the block's rounds are locked
-(<code>can_enter_round()</code> false, tests closed), as verified programmatically by backdating the window.</div>
+<section id="frtime-4">
+  <h2>FR-TIME-4 — Questionnaire only in the final round, only after 8 days</h2>
+  <h3>Final round in progress, &lt; 8 days → check-in locked</h3>
+  <img class="shot" src="shots/03-final-round-checkin-locked.png" alt="Final round — check-in locked">
+  <div class="caption">Round start is recorded automatically when <code>test_round</code> advances
+  (<code>bt_round_started_at</code>). <code>RoundLimits::is_progress_checkin_open()</code> keeps the form closed until
+  <code>round_start + 8 days</code> — and the round's tests must be completed first, so an early fill can never skip
+  unfinished tests.</div>
+  <h3>Final round, &gt; 8 days → check-in opens automatically, no email needed</h3>
+  <img class="shot" src="shots/04-final-round-checkin-open-after-8days.png" alt="Final round — check-in open after 8 days">
+  <div class="caption">With the round start backdated 9 days (the phpMyAdmin fast-forward from the manual guide) the
+  questionnaire is open. Non-final rounds keep invite/auto-access pacing retuned to 8 days, and the
+  <strong>admin override</strong> ("Grant progress access") still opens the check-in on demand.</div>
+</section>
 
-<h2>FR-TIME-4 — Questionnaire gate: only in the final round, only after 8 days</h2>
+<section id="admin-settings">
+  <h2>Admin — Tests → Settings</h2>
+  <img class="shot" src="shots/07-settings-round-timers.png" alt="Admin settings — window durations and PDF picker">
+  <div class="caption"><strong>"Round timers &amp; access windows"</strong>: initial (30) and continuation (21) window
+  durations are admin-configurable (validated 1–365; saved values are authoritative for newly purchased blocks; product
+  meta and constants apply only when unset). <strong>"Kurssin käyttöohjeet (PDF)"</strong>: one-step media-library
+  pick/upload/replace for the instruction PDF (FR-APP-6). Round invite delays and auto access (retuned to 8-day
+  defaults) drive the non-final pacing.</div>
+</section>
 
-<h3>4.1 Final round in progress, &lt; 8 days → check-in locked</h3>
-<img class="shot" src="shots/03-final-round-checkin-locked.png" alt="Final round — check-in locked">
-<div class="caption">Participant is in the block's final round (round start recorded). The Edistyminen tab shows
-<strong>no questionnaire form</strong>: the gate (<code>RoundLimits::is_final_round_checkin_due()</code>) requires
-<code>round_start + 8 days</code> — and the round's tests to be completed. Round starts are recorded automatically
-whenever <code>test_round</code> advances (<code>bt_round_started_at</code> user meta).</div>
+<section id="frapp-1">
+  <h2>FR-APP-1 — Unlimited rounds + general-pool fallback (Q6)</h2>
+  <img class="shot" src="shots/08-app1-round5-test.png" alt="Round 5 — test served, new sidebar order">
+  <div class="caption">Participant on <strong>round 5</strong>: a test is served with all active windows respected, and
+  the sidebar shows the new order without Hyvä tietää. Per-round test limits exist for every configured round; exercise
+  suggestions, progress views and PDF export follow the participant's real round. Education assignment accepts any
+  round (verified up to 12).</div>
+  <div class="impl"><strong>Q6 fallback.</strong> When the carry-over pool and the round's assigned tests are exhausted
+  (round ≥ 2), <code>Utils::resolve_next_test_query()</code> falls back to the <strong>general qualified pool</strong>:
+  published tests the participant has never rated in any round (tests rated 1/2/6 are permanently excluded), in
+  catalog order — so a round can always be completed. Verified: after rating every assigned round-5 test, the fallback
+  served an unrated catalog test and never re-served a rated one.</div>
+</section>
 
-<h3>4.2 Final round, &gt; 8 days → check-in unlocks automatically</h3>
-<img class="shot" src="shots/04-final-round-checkin-open-after-8days.png" alt="Final round — check-in open after 8 days">
-<div class="caption">Same participant with the round start backdated 9 days (the phpMyAdmin fast-forward from the manual
-guide): the questionnaire opens <strong>without any email link</strong>, filled, and advances the participant.
-For <strong>non-final rounds</strong> the existing invite / auto-access pacing is retained, retuned to 8 days
-(round end schedules the <code>bt_continuation_round_invite</code> event at the recommended delay).
-<strong>Admin override</strong> is preserved: "Grant progress access" on the Users Progress screen and the manual meta
-grant both open the check-in regardless of the gate.</div>
+<section id="frapp-2">
+  <h2>FR-APP-2 — Alkukysely &amp; text revisions</h2>
+  <div class="req">Client delivers the final commercial-version wording. Structure and storage
+  (<code>user_questions</code> posts, <code>user_info</code> array) are untouched and backward-compatible — pilot data
+  and progress charts keep working. Swapping the texts is then a content-only edit (template + translation strings).</div>
+  <p class="note">Status: awaiting the client's final wording. No storage or flow changes are needed for it.</p>
+</section>
 
-<h2>Admin configuration — Tests → Settings</h2>
-<img class="shot" src="shots/07-settings-round-timers.png" alt="Admin settings — Round timers & access windows section">
-<div class="caption">New section <strong>"Round timers &amp; access windows"</strong>: the initial and continuation window
-durations are admin-configurable (defaults 30 / 21, validated 1–365). A saved duration is authoritative for newly purchased
-blocks — product meta and code constants apply only when unset — so fast testing is possible (set 1 day) without database
-access. The existing fields above it (round invite delays, auto access, course end date) drive the FR-TIME-4 non-final
-pacing and the legacy countdown. The per-round 8-day questionnaire pacing lives in Test Management
-("Min days for questionnaire").</div>
+<section id="frapp-3">
+  <h2>FR-APP-3 — "Hyvä tietää" removed from participant navigation</h2>
+  <img class="shot" src="shots/08-app1-round5-test.png" alt="Sidebar without Hyvä tietää">
+  <div class="caption">The sidebar contains no Hyvä tietää entry (see any account screenshot — e.g. the round-5 view
+  above). The tab is also unroutable: <code>?action=good-to-know</code> no longer renders a panel. Admin "Education
+  materials" management is unchanged (FR-APP-4's admin UX requirement).</div>
+</section>
 
-<h2>Automated verification (all green)</h2>
-<table>
-  <tr><th>Suite</th><th>Scope</th><th>Result</th></tr>
-  <tr><td><code>verify-round-timer.php</code></td><td>Pending → 30-day start, 21-day continuation, expiry locking, countdown strings, 8-day gate at +3/+9 days, non-final pacing, legacy fallback, admin durations</td><td class="pass">ALL CHECKS PASSED</td></tr>
-  <tr><td><code>uat-round-timer-admin-flow.php</code></td><td>End-to-end with real WooCommerce orders: payment → block → rounds → prompt → continuation → expiry → clean delete</td><td class="pass">ALL CHECKS PASSED — 6.7 behaves as required</td></tr>
-  <tr><td><code>verify-round-access-gating.php</code></td><td>Payment-only round access, cumulative windows, settings changes never open rounds</td><td class="pass">ALL CHECKS PASSED</td></tr>
-  <tr><td><code>verify-progress-checkin-rounds.php</code></td><td>Check-in data for any round count, completion semantics, purchase clears completion</td><td class="pass">ALL CHECKS PASSED</td></tr>
-  <tr><td><code>verify-continuation-round-flow.php</code></td><td>Round 4/5 test serving, no repeats, carry-over ordering, clean finish</td><td class="pass">ALL CHECKS PASSED</td></tr>
-  <tr><td><code>verify-delete-round-cleanup.php</code></td><td>Full/single-round delete leaves a perfectly clean state; windows re-arm on restart</td><td class="pass">ALL CHECKS PASSED</td></tr>
-</table>
+<section id="frapp-4">
+  <h2>FR-APP-4 — Education content inside Harjoitukset</h2>
+  <img class="shot" src="shots/09-app4-education-harjoitukset.png" alt="Education cards inside Harjoitukset">
+  <div class="caption">Harjoitukset for round 5: the <strong>"UAT ennen harjoituksia"</strong> education card (before
+  exercises) opens the list, then the numbered exercise cards, then the <strong>"UAT harjoitusten jälkeen"</strong>
+  education card (after exercises). Materials are auto-appended per round when the coach displays the exercises; the
+  <strong>Harjoitukset notification dot</strong> fires for newly appended content (FR-APP-7). The per-round max of 2 and
+  the round ≤ 3 constraint are lifted — any round can carry any number of materials (verified with round 12).</div>
+</section>
 
-<h2>Reproduce</h2>
+<section id="frapp-5-6">
+  <h2>FR-APP-5/6 — "Kurssin käyttöohjeet" tab + admin-replaceable PDF</h2>
+  <img class="shot" src="shots/10-app5-kayttoohjeet-tab.png" alt="Kurssin käyttöohjeet tab with embedded PDF and download">
+  <div class="caption">The new tab (below Viestit, always available) embeds the current instruction PDF inline and
+  offers a <strong>download button</strong>. The admin replaces the file in one step under Tests → Settings: media-library
+  pick or direct upload, then save — the tab always serves the newest file, no developer involvement.</div>
+  <h3>Admin side — Tests → Settings</h3>
+  <img class="shot" src="shots/11-app6-settings-pdf-picker.png" alt="Settings — Kurssin käyttöohjeet PDF picker">
+  <div class="caption">The "Kurssin käyttöohjeet (PDF)" picker sits next to the FR-TIME window durations; the current
+  file is shown with "Open current PDF" and "Remove" actions.</div>
+</section>
+
+<section id="frapp-7">
+  <h2>FR-APP-7 — Sidebar order &amp; notification dots</h2>
+  <div class="impl">
+    Sidebar order after Round 1: <strong>Tasapainotestit · Harjoitukset · Edistyminen · Viestit · Kurssin käyttöohjeet</strong>
+    (verified in the rendered navigation). Notification dots: education dots now attach to
+    <strong>Harjoitukset</strong> when newly auto-appended content appears (education signature merged into the exercise
+    signature), and the <strong>Kurssin käyttöohjeet</strong> dot appears only when the admin replaces the instruction
+    PDF, clearing on visit and re-arming on the next replacement.
+  </div>
+</section>
+
+<section id="suites">
+  <h2>Automated verification (all green)</h2>
+  <table>
+    <tr><th>Suite</th><th>Scope</th><th>Result</th></tr>
+    <tr><td><code>verify-round-timer.php</code></td><td>Pending → 30-day start, 21-day continuation, expiry locking, countdown strings, 8-day gate at +3/+9 days, non-final pacing, legacy fallback, admin durations</td><td class="pass">ALL CHECKS PASSED</td></tr>
+    <tr><td><code>uat-round-timer-admin-flow.php</code></td><td>End-to-end with real WooCommerce orders: payment → block → rounds → prompt → continuation → expiry → clean delete</td><td class="pass">ALL CHECKS PASSED — 6.7 behaves as required</td></tr>
+    <tr><td><code>verify-round-access-gating.php</code></td><td>Payment-only round access, cumulative windows, settings changes never open rounds</td><td class="pass">ALL CHECKS PASSED</td></tr>
+    <tr><td><code>verify-progress-checkin-rounds.php</code></td><td>Check-in data for any round count, completion semantics, purchase clears completion</td><td class="pass">ALL CHECKS PASSED</td></tr>
+    <tr><td><code>verify-continuation-round-flow.php</code></td><td>Round 4/5 test serving, no repeats, carry-over ordering, clean finish</td><td class="pass">ALL CHECKS PASSED</td></tr>
+    <tr><td><code>verify-delete-round-cleanup.php</code></td><td>Full/single-round delete leaves a perfectly clean state; windows re-arm on restart</td><td class="pass">ALL CHECKS PASSED</td></tr>
+    <tr><td><code>verify-app-updates.php</code></td><td>Unlimited rounds + Q6 fallback, education any-round + list split, nav order without Hyvä tietää, PDF option + dot lifecycle</td><td class="pass">ALL CHECKS PASSED</td></tr>
+  </table>
+</section>
+
+<section id="reproduce">
+  <h2>Reproduce</h2>
 <pre>cd ~/Local\ Sites/balance-testing/app/public
 php wp-content/plugins/balance-testing/scripts/verify-round-timer.php
 php wp-content/plugins/balance-testing/scripts/uat-round-timer-admin-flow.php
 php wp-content/plugins/balance-testing/scripts/verify-round-access-gating.php
 php wp-content/plugins/balance-testing/scripts/verify-progress-checkin-rounds.php
 php wp-content/plugins/balance-testing/scripts/verify-continuation-round-flow.php
-php wp-content/plugins/balance-testing/scripts/verify-delete-round-cleanup.php</pre>
+php wp-content/plugins/balance-testing/scripts/verify-delete-round-cleanup.php
+php wp-content/plugins/balance-testing/scripts/verify-app-updates.php</pre>
+  <p class="note">Fast-forward tricks used in the manual guide: set per-round "Min days for questionnaire" / invite
+  delays to 1 (Tests → Settings / Test Management), or backdate <code>bt_round_started_at</code> and
+  <code>bt_course_blocks</code> windows via phpMyAdmin. Run delayed cron events with WP Crontrol.</p>
+</section>
 
-<p class="note">Bugs found and fixed during this verification round: fresh participants' ratings landed in "round 0"
-(so the 30-day timer never started — FR-TIME-1), the final-round check-in could be submitted before the round's tests
-were done, a full progress delete left the old timers running (FR-TIME-1 restart), and the window durations were not
-admin-configurable. All fixed in this release and covered by the suites above.</p>
+</div></main>
 
-</div>
+<script>
+(function () {
+  var input  = document.getElementById('toc-search');
+  var links  = Array.prototype.slice.call(document.querySelectorAll('#toc a'));
+  var empty  = document.getElementById('toc-empty');
+  var items  = links.map(function (a) { return a.parentElement; });
+
+  input.addEventListener('input', function () {
+    var q = input.value.trim().toLowerCase();
+    var visible = 0;
+    items.forEach(function (li) {
+      var text = li.textContent.toLowerCase();
+      var show = !q || text.indexOf(q) !== -1;
+      li.style.display = show ? '' : 'none';
+      if (show) { ++visible; }
+    });
+    empty.style.display = visible ? 'none' : 'block';
+  });
+
+  var tocLinks = links;
+  var sections = tocLinks.map(function (a) {
+    return document.getElementById((a.getAttribute('href') || '').replace('#', ''));
+  });
+
+  function highlight() {
+    var best = 0, bestDist = Infinity;
+    var from = window.scrollY + 90;
+    sections.forEach(function (sec, i) {
+      if (!sec) { return; }
+      var top = sec.getBoundingClientRect().top + window.scrollY;
+      if (top <= from && from - top < bestDist) { bestDist = from - top; best = i; }
+    });
+    tocLinks.forEach(function (a, i) { a.classList.toggle('active', i === best); });
+  }
+
+  window.addEventListener('scroll', highlight, { passive: true });
+  window.addEventListener('resize', highlight);
+  highlight();
+
+  tocLinks.forEach(function (a) {
+    a.addEventListener('click', function () {
+      tocLinks.forEach(function (x) { x.classList.remove('active'); });
+      a.classList.add('active');
+    });
+  });
+})();
+</script>
+
 </body>
 </html>
